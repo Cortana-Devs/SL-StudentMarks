@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Student, Subject, Mark } from '../../types';
+import { Student, Subject, Mark, ViewType, Term } from '../../types';
 import { getSubjects, getStudentMarks, addMark, updateMark } from '../../services/realtimeDatabase';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -18,6 +18,7 @@ const MarkEntry = ({ student, grade }: MarkEntryProps) => {
     const [loading, setLoading] = useState(false);
     const [existingMarks, setExistingMarks] = useState<Mark[]>([]);
     const [submitting, setSubmitting] = useState(false);
+    const [viewType, setViewType] = useState<ViewType>('term-wise');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -100,6 +101,154 @@ const MarkEntry = ({ student, grade }: MarkEntryProps) => {
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const determineTermFromDate = (timestamp: number): Term => {
+        const date = new Date(timestamp);
+        const month = date.getMonth();
+        
+        if (month >= 0 && month <= 3) return 'Term 1';
+        if (month >= 4 && month <= 7) return 'Term 2';
+        return 'Term 3';
+    };
+
+    const renderSubjectWiseView = () => (
+        <div className="space-y-6">
+            {subjects.map(subject => {
+                const subjectMarks = existingMarks
+                    .filter(mark => mark.subjectId === subject.id)
+                    .sort((a, b) => b.timestamp - a.timestamp);
+                
+                if (subjectMarks.length === 0) return null;
+
+                return (
+                    <div key={subject.id} className="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
+                        <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                            <h3 className="text-sm font-medium text-gray-900">{subject.name}</h3>
+                        </div>
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-white">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Score
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Date
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Comments
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {subjectMarks.map((mark, index) => (
+                                    <tr 
+                                        key={mark.id}
+                                        className={`hover:bg-gray-50 transition-colors duration-200 ${
+                                            index === 0 ? 'bg-green-50' : ''
+                                        }`}
+                                    >
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                mark.score >= 75 ? 'bg-green-100 text-green-800' :
+                                                mark.score >= 50 ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-red-100 text-red-800'
+                                            }`}>
+                                                {mark.score}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {new Date(mark.timestamp).toLocaleDateString()}
+                                            {index === 0 && (
+                                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                    Latest
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            {mark.comment || '-'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            })}
+        </div>
+    );
+
+    const renderTermWiseView = () => {
+        const terms: Term[] = ['Term 1', 'Term 2', 'Term 3'];
+        
+        return (
+            <div className="space-y-8">
+                {terms.map(term => {
+                    const termMarks = existingMarks.filter(mark => determineTermFromDate(mark.timestamp) === term);
+                    if (termMarks.length === 0) return null;
+
+                    return (
+                        <div key={term} className="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
+                            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                                <h3 className="text-lg font-medium text-gray-900">{term}</h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Subject
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Score
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Date
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Comments
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {subjects.map(subject => {
+                                            const subjectMark = termMarks
+                                                .filter(mark => mark.subjectId === subject.id)
+                                                .sort((a, b) => b.timestamp - a.timestamp)[0];
+                                            
+                                            if (!subjectMark) return null;
+
+                                            return (
+                                                <tr key={`${term}-${subject.id}`} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                        {subject.name}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                            subjectMark.score >= 75 ? 'bg-green-100 text-green-800' :
+                                                            subjectMark.score >= 50 ? 'bg-yellow-100 text-yellow-800' :
+                                                            'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {subjectMark.score}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {new Date(subjectMark.timestamp).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                                        {subjectMark.comment || '-'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
     };
 
     if (loading) {
@@ -207,48 +356,32 @@ const MarkEntry = ({ student, grade }: MarkEntryProps) => {
             {/* Existing Marks */}
             {existingMarks.length > 0 && (
                 <div className="mt-8">
-                    <h4 className="text-md font-medium text-gray-900 mb-4">Existing Marks</h4>
-                    <div className="bg-white shadow overflow-hidden sm:rounded-lg border border-gray-200">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Subject
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Score
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Last Updated
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {existingMarks.map((mark) => (
-                                    <tr 
-                                        key={mark.id}
-                                        className="hover:bg-gray-50 transition-colors duration-200"
-                                    >
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {subjects.find(s => s.id === mark.subjectId)?.name}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                mark.score >= 75 ? 'bg-green-100 text-green-800' :
-                                                mark.score >= 50 ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-red-100 text-red-800'
-                                            }`}>
-                                                {mark.score}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {new Date(mark.timestamp).toLocaleDateString()}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-md font-medium text-gray-900">Existing Marks</h4>
+                        <div className="inline-flex rounded-md shadow-sm">
+                            <button
+                                onClick={() => setViewType('term-wise')}
+                                className={`relative inline-flex items-center px-4 py-2 rounded-l-md border text-sm font-medium ${
+                                    viewType === 'term-wise'
+                                        ? 'bg-indigo-600 text-white border-indigo-600'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                }`}
+                            >
+                                Term-wise
+                            </button>
+                            <button
+                                onClick={() => setViewType('subject-wise')}
+                                className={`relative -ml-px inline-flex items-center px-4 py-2 rounded-r-md border text-sm font-medium ${
+                                    viewType === 'subject-wise'
+                                        ? 'bg-indigo-600 text-white border-indigo-600'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                }`}
+                            >
+                                Subject-wise
+                            </button>
+                        </div>
                     </div>
+                    {viewType === 'subject-wise' ? renderSubjectWiseView() : renderTermWiseView()}
                 </div>
             )}
         </div>

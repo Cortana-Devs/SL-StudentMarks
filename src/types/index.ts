@@ -38,4 +38,12 @@ export interface Teacher {
     name: string;
     email: string;
     subjects: string[]; // Array of subject IDs they teach
+}
+
+export type ViewType = 'term-wise' | 'subject-wise';
+
+export type Term = 'Term 1' | 'Term 2' | 'Term 3';
+
+export interface MarkWithTerm extends Mark {
+    term: Term;
 } 

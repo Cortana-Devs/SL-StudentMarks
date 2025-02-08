@@ -5,7 +5,9 @@ import {
     signOut, 
     onAuthStateChanged,
     User as FirebaseUser,
-    UserCredential
+    UserCredential,
+    setPersistence,
+    browserLocalPersistence
 } from 'firebase/auth';
 import { createUser, getUser } from '../services/realtimeDatabase';
 import { User, UserRole } from '../types';
@@ -36,6 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const signup = async (email: string, password: string, role: UserRole, name: string, grade?: number) => {
         try {
+            await setPersistence(auth, browserLocalPersistence);
             const { user } = await createUserWithEmailAndPassword(auth, email, password);
             
             const userData: User = {
@@ -57,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const login = async (email: string, password: string) => {
         try {
+            await setPersistence(auth, browserLocalPersistence);
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             return userCredential;
         } catch (error) {
@@ -77,12 +81,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     useEffect(() => {
+        setLoading(true);
+        
         const unsubscribe = onAuthStateChanged(auth, async (user: FirebaseUser | null) => {
             try {
                 if (user) {
                     const userData = await getUser(user.uid);
                     if (userData) {
                         setCurrentUser(userData as User);
+                    } else {
+                        const basicUserData: User = {
+                            uid: user.uid,
+                            email: user.email!,
+                            role: 'student',
+                            name: user.displayName || user.email!.split('@')[0]
+                        };
+                        await createUser(user.uid, basicUserData);
+                        setCurrentUser(basicUserData);
                     }
                 } else {
                     setCurrentUser(null);
@@ -90,12 +105,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } catch (error) {
                 console.error('Auth state change error:', error);
                 toast.error('Authentication error occurred');
+                setCurrentUser(null);
             } finally {
                 setLoading(false);
             }
         });
 
-        return unsubscribe;
+        return () => unsubscribe();
     }, []);
 
     const value = {

@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../layout/DashboardLayout';
-import { Student } from '../../types';
+import { Student, Subject, Mark } from '../../types';
 import StudentList from './StudentList';
 import MarkEntry from './MarkEntry';
 import SubjectManagement from './SubjectManagement';
 import GenerateReport from './GenerateReport';
+import SetupSampleData from '../admin/SetupSampleData';
 import { GRADES } from '../../constants/subjects';
+import TeacherStats from './TeacherStats';
+import { getStudentsByGrade, getStudentMarks, getSubjects } from '../../services/realtimeDatabase';
+import { toast } from 'react-hot-toast';
 
 type TabType = 'marks' | 'subjects';
 
@@ -13,12 +17,50 @@ const TeacherDashboard = () => {
     const [selectedGrade, setSelectedGrade] = useState<number>(1);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [activeTab, setActiveTab] = useState<TabType>('marks');
+    const [students, setStudents] = useState<Student[]>([]);
+    const [marks, setMarks] = useState<Mark[]>([]);
+    const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const [fetchedStudents, fetchedSubjects] = await Promise.all([
+                    getStudentsByGrade(selectedGrade),
+                    getSubjects(selectedGrade)
+                ]);
+                setStudents(fetchedStudents);
+                setSubjects(fetchedSubjects);
+
+                // Fetch marks for all students
+                const marksPromises = fetchedStudents.map(student => getStudentMarks(student.id));
+                const allMarks = (await Promise.all(marksPromises)).flat();
+                setMarks(allMarks);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                toast.error('Failed to load data');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [selectedGrade]);
 
     const renderTabContent = () => {
         switch (activeTab) {
             case 'marks':
                 return (
                     <div className="space-y-4 md:space-y-6">
+                        {/* Class Statistics */}
+                        <TeacherStats
+                            marks={marks}
+                            subjects={subjects}
+                            students={students}
+                            grade={selectedGrade}
+                        />
+                        
                         {/* Report Generation */}
                         <div className="w-full">
                             <GenerateReport grade={selectedGrade} />
@@ -60,62 +102,71 @@ const TeacherDashboard = () => {
 
     return (
         <DashboardLayout title="Teacher Dashboard">
-            <div className="space-y-4 md:space-y-6 px-4 sm:px-6 lg:px-8 py-4 md:py-6">
-                {/* Grade Selection */}
-                <div className="bg-white shadow-lg rounded-lg p-4 md:p-6 border border-gray-100">
-                    <div className="max-w-xs">
-                        <label htmlFor="grade" className="block text-sm font-medium text-gray-700">
-                            Select Grade
-                        </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                            <select
-                                id="grade"
-                                value={selectedGrade}
-                                onChange={(e) => {
-                                    setSelectedGrade(Number(e.target.value));
-                                    setSelectedStudent(null);
-                                }}
-                                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md transition-colors duration-200"
-                            >
-                                {GRADES.map((grade) => (
-                                    <option key={grade} value={grade}>
-                                        Grade {grade}
-                                    </option>
-                                ))}
-                            </select>
+            {loading ? (
+                <div className="flex items-center justify-center h-64">
+                    <div className="text-gray-600">Loading...</div>
+                </div>
+            ) : (
+                <div className="space-y-4 md:space-y-6 px-4 sm:px-6 lg:px-8 py-4 md:py-6">
+                    {/* Grade Selection */}
+                    <div className="bg-white shadow-lg rounded-lg p-4 md:p-6 border border-gray-100">
+                        <div className="max-w-xs">
+                            <label htmlFor="grade" className="block text-sm font-medium text-gray-700">
+                                Select Grade
+                            </label>
+                            <div className="mt-1 relative rounded-md shadow-sm">
+                                <select
+                                    id="grade"
+                                    value={selectedGrade}
+                                    onChange={(e) => {
+                                        setSelectedGrade(Number(e.target.value));
+                                        setSelectedStudent(null);
+                                    }}
+                                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md transition-colors duration-200"
+                                >
+                                    {GRADES.map((grade) => (
+                                        <option key={grade} value={grade}>
+                                            Grade {grade}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Tabs */}
-                <div className="border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-4 md:space-x-8 overflow-x-auto" aria-label="Tabs">
-                        <button
-                            onClick={() => setActiveTab('marks')}
-                            className={`${
-                                activeTab === 'marks'
-                                    ? 'border-indigo-500 text-indigo-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
-                        >
-                            Student Marks
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('subjects')}
-                            className={`${
-                                activeTab === 'subjects'
-                                    ? 'border-indigo-500 text-indigo-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                            } whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
-                        >
-                            Manage Subjects
-                        </button>
-                    </nav>
-                </div>
+                    {/* Tabs */}
+                    <div className="border-b border-gray-200">
+                        <nav className="-mb-px flex space-x-4 md:space-x-8 overflow-x-auto" aria-label="Tabs">
+                            <button
+                                onClick={() => setActiveTab('marks')}
+                                className={`${
+                                    activeTab === 'marks'
+                                        ? 'border-indigo-500 text-indigo-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                } whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
+                            >
+                                Student Marks
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('subjects')}
+                                className={`${
+                                    activeTab === 'subjects'
+                                        ? 'border-indigo-500 text-indigo-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                } whitespace-nowrap py-3 md:py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
+                            >
+                                Manage Subjects
+                            </button>
+                        </nav>
+                    </div>
 
-                {/* Tab Content */}
-                {renderTabContent()}
-            </div>
+                    {/* Tab Content */}
+                    {renderTabContent()}
+
+                    {/* Sample Data Setup */}
+                    <SetupSampleData />
+                </div>
+            )}
         </DashboardLayout>
     );
 };
