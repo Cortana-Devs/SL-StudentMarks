@@ -4,7 +4,6 @@ import { Toaster } from 'react-hot-toast';
 import React, { lazy, useEffect, Suspense } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { initializeDatabase } from './utils/initializeDatabase';
-import TestTailwind from './components/TestTailwind';
 
 // Lazy load components
 const Login = lazy(() => import('./components/auth/Login'));

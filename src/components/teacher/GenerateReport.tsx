@@ -136,44 +136,20 @@ const GenerateReport: React.FC<GenerateReportProps> = ({ grade }) => {
     };
 
     return (
-        <div style={{
-            backgroundColor: 'var(--color-surface)',
-            borderRadius: 'var(--border-radius)',
-            padding: 'var(--spacing-4)',
-            border: '1px solid var(--color-border)'
-        }}>
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 'var(--spacing-4)',
-                '@media (min-width: 640px)': {
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                }
-            }}>
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h3 style={{
-                        fontSize: 'var(--font-size-lg)',
-                        fontWeight: '500',
-                        color: 'var(--color-text)',
-                        marginBottom: 'var(--spacing-1)'
-                    }}>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">
                         Generate Report
                     </h3>
-                    <p style={{
-                        fontSize: 'var(--font-size-sm)',
-                        color: 'var(--color-text-secondary)',
-                        maxWidth: '24rem'
-                    }}>
+                    <p className="text-sm text-gray-500 max-w-lg">
                         Download a detailed academic report for Grade {grade}
                     </p>
                 </div>
                 <button
                     onClick={handleGenerateReport}
                     disabled={loading}
-                    className="btn btn-primary w-full sm:w-auto"
-                    style={{ minWidth: '140px' }}
+                    className="btn btn-primary w-full sm:w-auto min-w-[140px]"
                 >
                     {loading ? 'Generating...' : 'Generate Report'}
                 </button>
