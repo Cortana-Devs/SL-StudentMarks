@@ -10,6 +10,7 @@ const Login = lazy(() => import('./components/auth/Login'));
 const Register = lazy(() => import('./components/auth/Register'));
 const StudentDashboard = lazy(() => import('./components/student/StudentDashboard'));
 const TeacherDashboard = lazy(() => import('./components/teacher/TeacherDashboard'));
+const AdvancedManagement = lazy(() => import('./components/teacher/AdvancedManagement'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -64,6 +65,16 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={['teacher']}>
                     <TeacherDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Advanced Management Route */}
+              <Route 
+                path="/teacher/advanced" 
+                element={
+                  <ProtectedRoute allowedRoles={['teacher']}>
+                    <AdvancedManagement />
                   </ProtectedRoute>
                 } 
               />
