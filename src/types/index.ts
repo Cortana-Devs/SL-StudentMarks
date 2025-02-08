@@ -1,0 +1,41 @@
+export type UserRole = 'student' | 'teacher';
+
+export interface User {
+    uid: string;
+    email: string;
+    role: UserRole;
+    name: string;
+    grade?: number; // Only for students
+    subjects?: string[]; // Only for teachers
+}
+
+export interface Subject {
+    id: string;
+    name: string;
+    grade: number;
+}
+
+export interface Mark {
+    id: string;
+    studentId: string;
+    subjectId: string;
+    grade: number;
+    score: number;
+    comment?: string;
+    teacherId: string;
+    timestamp: number;
+}
+
+export interface Student {
+    id: string;
+    name: string;
+    grade: number;
+    email: string;
+}
+
+export interface Teacher {
+    id: string;
+    name: string;
+    email: string;
+    subjects: string[]; // Array of subject IDs they teach
+} 
