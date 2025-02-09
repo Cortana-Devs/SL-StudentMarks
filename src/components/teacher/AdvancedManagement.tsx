@@ -6,6 +6,7 @@ import { ref, get, set } from 'firebase/database';
 import { Mark } from '../../types';
 import { setupSampleData, clearSampleData } from '../../utils/setupSampleData';
 import { useNavigate } from 'react-router-dom';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 interface DatabaseStats {
     totalUsers: number;
@@ -158,20 +159,37 @@ const AdvancedManagement = () => {
             const allMarks: Record<string, Mark> = {};
             
             for (const student of sampleStudents) {
-                const studentUid = `sample_${student.email.split('@')[0]}`; // Create a consistent UID
-                existingUsers[studentUid] = {
-                    uid: studentUid,
-                    email: student.email,
-                    name: student.name,
-                    role: 'student',
-                    grade: student.grade
-                };
+                try {
+                    // Create a predictable password: FirstName@123
+                    const password = student.name.split(' ')[0] + '@123';
+                    
+                    // Create auth account
+                    const userCredential = await createUserWithEmailAndPassword(auth, student.email, password);
+                    const studentUid = userCredential.user.uid;
+                    
+                    // Add to database
+                    existingUsers[studentUid] = {
+                        uid: studentUid,
+                        email: student.email,
+                        name: student.name,
+                        role: 'student',
+                        grade: student.grade
+                    };
 
-                // Generate and store marks for this student
-                const studentMarks = generateSampleMarks(studentUid, currentUser.uid, student.grade);
-                studentMarks.forEach(mark => {
-                    allMarks[mark.id] = mark;
-                });
+                    // Generate and store marks for this student
+                    const studentMarks = generateSampleMarks(studentUid, currentUser.uid, student.grade);
+                    studentMarks.forEach(mark => {
+                        allMarks[mark.id] = mark;
+                    });
+
+                    console.log(`Created account for ${student.name} (${student.email}) with password: ${password}`);
+                } catch (error) {
+                    if (error instanceof Error && error.message.includes('email-already-in-use')) {
+                        console.log(`Account already exists for ${student.email}`);
+                    } else {
+                        console.error(`Error creating account for ${student.email}:`, error);
+                    }
+                }
             }
             
             // Update both users and marks in the database
