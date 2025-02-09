@@ -5,7 +5,6 @@ import StudentList from './StudentList';
 import MarkEntry from './MarkEntry';
 import SubjectManagement from './SubjectManagement';
 import GenerateReport from './GenerateReport';
-import SetupSampleData from '../admin/SetupSampleData';
 import { GRADES } from '../../constants/subjects';
 import TeacherStats from './TeacherStats';
 import { getStudentsByGrade, getStudentMarks, getSubjects } from '../../services/realtimeDatabase';
@@ -163,8 +162,6 @@ const TeacherDashboard = () => {
                     {/* Tab Content */}
                     {renderTabContent()}
 
-                    {/* Sample Data Setup */}
-                    <SetupSampleData />
                 </div>
             )}
         </DashboardLayout>
